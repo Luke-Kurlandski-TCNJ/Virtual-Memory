@@ -14,7 +14,7 @@ int PAGE_TABLE [256];
 int TLB [16];
 
 int page_number(int address) {
-	// 65280 == 00..001111111100..00
+	// 255 == 00..001111111100..00, shifts address 8 bits to the right
 	return (255 & address<<8);
 }
 
@@ -25,8 +25,8 @@ int offset(int address) {
 
 void pageFault(int pageNumber) {
 	FILE* file;
-	int maxChar = 256;
-	char str[maxChar];
+	int maxChar = 65536; //TESTING: Set size to entire file
+	unsigned char str[maxChar];
 
 	// open the .bin file
 	file = fopen("BACKING_STORE.bin", "rb");
@@ -39,8 +39,10 @@ void pageFault(int pageNumber) {
 	// read in the data from BACKING_STORE.bin	
 	fread(str, maxChar, 1, file);
 
-	// use the data at the requested page number
-	printf("%u\n ", str[pageNumber]);
+	// TESTING: print the entire bin file
+	for (int i = 0; i < maxChar; i++) {
+		printf("%u  ", str[i]);
+	}
 	
 	// close the file when finished
 	fclose(file);
@@ -62,14 +64,15 @@ void addressParsing() {
 	}
 
 	// parse through each line, getting info from each logical address
+	int currAddress;
 	while (fgets(str, maxChar, file) != NULL) {
-		int currAddress = atoi(str);
+		currAddress = atoi(str);
 		printf("page number = %d\n", page_number(currAddress));
 		printf("offset = %d\n", offset(currAddress));
 	
-		pageFault(page_number(currAddress));
 	}
 	
+	pageFault(page_number(currAddress)); //TESTING PURPOSES
 	// close the file when finished
 	fclose(file);
 
