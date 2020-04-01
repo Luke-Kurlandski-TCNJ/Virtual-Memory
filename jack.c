@@ -15,7 +15,7 @@ int TLB [16];
 
 int page_number(int address) {
 	// 255 == 00..001111111100..00, shifts address 8 bits to the right
-	return (255 & address<<8);
+	return (255 & address>>8);
 }
 
 int offset(int address) {
@@ -25,7 +25,9 @@ int offset(int address) {
 
 void pageFault(int pageNumber) {
 	FILE* file;
-	int maxChar = 65536; //TESTING: Set size to entire file
+	// This should be the first index of our desired page
+	int beginIndex = 256 * pageNumber;
+	int maxChar = beginIndex + 256; //TESTING: Set size to entire file
 	unsigned char str[maxChar];
 
 	// open the .bin file
@@ -37,12 +39,14 @@ void pageFault(int pageNumber) {
 	}
 
 	// read in the data from BACKING_STORE.bin	
-	fread(str, maxChar, 1, file);
+	fread(str, 1, maxChar, file);
 
-	// TESTING: print the entire bin file
-	for (int i = 0; i < maxChar; i++) {
+	// TESTING: print out 256 items after beginIndex
+	for (int i = beginIndex; i < maxChar; i++) {
 		printf("%u  ", str[i]);
 	}
+
+	printf("\n");
 	
 	// close the file when finished
 	fclose(file);
@@ -70,9 +74,9 @@ void addressParsing() {
 		printf("page number = %d\n", page_number(currAddress));
 		printf("offset = %d\n", offset(currAddress));
 	
+		pageFault(page_number(currAddress));
 	}
 	
-	pageFault(page_number(currAddress)); //TESTING PURPOSES
 	// close the file when finished
 	fclose(file);
 
