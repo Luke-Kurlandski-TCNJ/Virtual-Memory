@@ -9,17 +9,21 @@
 #include <stdio.h>
 #include <math.h>
 
-// index = page number, value = page offset
-int PAGE_TABLE [256];
-int TLB [16];
+// index:page number
+// value:(0:frame number, 1:page offset, 2:valid/invalid bit)
+int PAGE_TABLE[256][3];
+// index:nothing, value:(0:page number, 1:frame number)
+int TLB[16][2];
 
+// Calculate the page number from a logical address.
 int page_number(int address) {
-	// 255 == 00..001111111100..00, shifts address 8 bits to the right
+	// 255 = 000000001111111100000000
 	return (255 & address>>8);
 }
 
-int offset(int address) {
-	// 255 == 00...0011111111
+// Calculate the offset for a logical address.
+int page_offset(int address) {
+	// 255 = 000000000000000011111111
 	return (255 & address);
 }
 
@@ -28,7 +32,7 @@ void pageFault(int pageNumber) {
 	// This should be the first index of our desired page
 	int beginIndex = 256 * pageNumber;
 	int maxChar = beginIndex + 256; //TESTING: Set size to entire file
-	unsigned char str[maxChar];
+	char str[maxChar];
 
 	// open the .bin file
 	file = fopen("BACKING_STORE.bin", "rb");
@@ -43,7 +47,7 @@ void pageFault(int pageNumber) {
 
 	// TESTING: print out 256 items after beginIndex
 	for (int i = beginIndex; i < maxChar; i++) {
-		printf("%u  ", str[i]);
+		printf("%d  ", str[i]);
 	}
 
 	printf("\n");
@@ -54,38 +58,58 @@ void pageFault(int pageNumber) {
 	return;
 }
 
-void addressParsing() {
+
+// Return the frame number if the page number is in the TLB.
+int search_TLB(int number) {
+	for (int i=0; i<16; i++) {
+		if (TLB[i][0] == number)
+			return TLB[i][1];
+	}
+	return -1;
+}
+
+// Return the frame number if the page number is in page table.
+int search_table(int number) {
+	if (PAGE_TABLE[number][2] == 1)  
+		return PAGE_TABLE[number][0];
+	else // Page Fault 
+		return -1;
+}
+
+void addressParsing(char *f) {
 	FILE* file;
 	int maxChar = 10;
 	char str[maxChar];
 	// open txt file containing all logical addresses
-	file = fopen("addresses.txt", "r");
+	file = fopen(f, "r");
 	
 	// return if file could not open
 	if (file == NULL) {
-		printf("Could not open addresses.txt\n");
+		printf("Could not open address file.\n");
 		return;
 	}
 
-	// parse through each line, getting info from each logical address
-	int currAddress;
+	// parse and get info from each logical address
 	while (fgets(str, maxChar, file) != NULL) {
-		currAddress = atoi(str);
-		printf("page number = %d\n", page_number(currAddress));
-		printf("offset = %d\n", offset(currAddress));
-	
-		pageFault(page_number(currAddress));
+		int address = atoi(str);
+		int number = page_number(address);
+		int offset = page_offset(address);
+		//printf("Number: %d Offset: %d\n", number, offset);
+		
+		// Search the TLB for the page.
+		int frame_number = search_TLB(number);
+		if (frame_number < 0) {
+			// Search page table for page.
+			frame_number = search_table(number);
+			if (frame_number < 0) {
+				pageFault(number);
+			}
+		}
 	}
-	
-	// close the file when finished
-	fclose(file);
-
 	return;
 }
 
-int main(int *argc, char **argv) {
-	addressParsing();
-
-	printf("%d\n", page_number(1));
+int main(int *argc, char **argv) {	
+	addressParsing(argv[1]);
 	return 0;
 }
