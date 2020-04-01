@@ -7,13 +7,45 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
+
+// index = page number, value = page offset
+int PAGE_TABLE [256];
+int TLB [16];
 
 int page_number(int address) {
-	return (65280 & address); // 65280 == 00..001111111100..00
+	// 65280 == 00..001111111100..00
+	return (255 & address<<8);
 }
 
 int offset(int address) {
-	return (255 & address); // 255 == 00...0011111111
+	// 255 == 00...0011111111
+	return (255 & address);
+}
+
+void pageFault(int pageNumber) {
+	FILE* file;
+	int maxChar = 256;
+	char str[maxChar];
+
+	// open the .bin file
+	file = fopen("BACKING_STORE.bin", "rb");
+
+	if (file == NULL) {
+		printf("Could not open BACKING_STORE.bin\n");
+		return;
+	}
+
+	// read in the data from BACKING_STORE.bin	
+	fread(str, maxChar, 1, file);
+
+	// use the data at the requested page number
+	printf("%u\n ", str[pageNumber]);
+	
+	// close the file when finished
+	fclose(file);
+
+	return;
 }
 
 void addressParsing() {
@@ -34,7 +66,12 @@ void addressParsing() {
 		int currAddress = atoi(str);
 		printf("page number = %d\n", page_number(currAddress));
 		printf("offset = %d\n", offset(currAddress));
+	
+		pageFault(page_number(currAddress));
 	}
+	
+	// close the file when finished
+	fclose(file);
 
 	return;
 }
