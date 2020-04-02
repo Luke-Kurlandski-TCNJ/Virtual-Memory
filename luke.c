@@ -44,33 +44,70 @@ int search_table(int number) {
 		return -1;
 }
 
-void addressParsing(char *f) {
+void pageFault(int pageNumber) {
 	FILE* file;
-	int maxChar = 10;
-	char str[maxChar];
-	// open txt file containing all logical addresses
-	file = fopen("addresses.txt", "r");
-	
-	// return if file could not open
+	// This should be the first index of our desired page
+	int beginIndex = 256 * pageNumber;
+	int maxChar = beginIndex + 256; 
+	unsigned char str[maxChar];
+
+	// open the .bin file
+	file = fopen("BACKING_STORE.bin", "rb");
+
 	if (file == NULL) {
-		printf("Could not open addresses.txt\n");
+		printf("Could not open BACKING_STORE.bin\n");
 		return;
 	}
 
-	// parse and get info from each logical address
+	// read in the data from BACKING_STORE.bin	
+	fread(str, 1, maxChar, file);
+
+	// TESTING: print out 256 items after beginIndex
+	for (int i = beginIndex; i < maxChar; i++) {
+		printf("%u  ", str[i]);
+	}
+
+	printf("\n");
+	
+	// close the file when finished
+	fclose(file);
+
+	return;
+}
+
+void addressParsing(char *f) {	
+	// File containing all logical addresses and output files.
+	FILE *file = fopen(f, "r");
+	FILE *f1 = fopen("out1.txt", "w");
+	FILE *f2 = fopen("out2.txt", "w");
+	FILE *f3 = fopen("out3.txt", "w");
+	// Return if failures occur.
+	if (file==NULL || f1==NULL || f2==NULL || f3==NULL) {
+		printf("Could not open a file.\n");
+		return;
+	}
+
+	int maxChar = 10;
+	char str[maxChar];
+	// Parse file, get info from each logical address, write
 	while (fgets(str, maxChar, file) != NULL) {
+		// Get info from the file.
 		int address = atoi(str);
 		int number = page_number(address);
 		int offset = page_offset(address);
+		// Write info to the output files.
+		fwrite(&address, sizeof(int), 1, f1);
+		fwrite(&number, sizeof(int), 1, f2);
 		//printf("Number: %d Offset: %d\n", number, offset);
 		
 		// Search the TLB for the page.
-		frame_number = search_TLB(number);
+		int frame_number = search_TLB(number);
 		if (frame_number < 0) {
 			// Search page table for page.
 			frame_number = search_table(number);
-			if (frame_number < 0)
+			if (frame_number < 0) {
 				// Read from memory.
+			}
 		}
 	}
 	return;
