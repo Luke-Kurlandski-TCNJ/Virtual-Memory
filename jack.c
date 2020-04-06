@@ -18,12 +18,12 @@ int TLB[16][2];
 // physical memory
 int MEMORY[256*256];
 
-	TAILQ_HEAD(tailhead, entry) head;
-	struct tailhead *headp;
-	struct entry {
-		int val;
-		TAILQ_ENTRY(entry) entries;
-	} *n, *np;
+TAILQ_HEAD(tailhead, entry) head;
+struct tailhead *headp;
+struct entry {
+	int val;
+	TAILQ_ENTRY(entry) entries;
+} *n, *np;
 
 // Calculate the page number from a logical address.
 int page_number(int address) {
@@ -43,7 +43,7 @@ struct tailhead* createQueue() {
 	n = malloc(sizeof(struct entry));
 	TAILQ_INSERT_TAIL(&head, n, entries);
 
-	return (headp);
+	return (&head);
 }
 
 
@@ -76,6 +76,20 @@ void pageFault(int pageNumber, struct tailhead* headPointer) {
 	// Update the queue
 
 	// Update the TLB
+	int emptySlot = 0;
+	for (int i = 0; i < 16; i++) {
+		if (TLB[i][0] == -1) {
+			TLB[i][0] = pageNumber;
+			TLB[i][1] = pageNumber; //FIXME: FRAME NUMBER WILL BE DIFFERENT
+			emptySlot = 1;
+			break;
+		}
+	}
+	if (emptySlot == 0) {
+		int newSlot = rand() % 16;
+		TLB[newSlot][0] = pageNumber;
+		TLB[newSlot][1] = pageNumber; //FIXME: FRAME NUMBER WILL BE DIFFERENT
+	}
 
 
 	return;
@@ -144,8 +158,17 @@ void addressParsing(char *f, struct tailhead* headPointer) {
 }
 
 int main(int *argc, char **argv) {	
+	// Initialize empty values in TLB to be -1
+	for (int i = 0; i < 16; i++) {
+		for (int j = 0; j < 2; j++) {
+			TLB[i][j] = -1;
+		}
+	}
+
+	// Initialize the headPointer for our queue
 	struct tailhead* headPointer = createQueue();
 
+	// Call on addressParsing to begin reading logical addresses
 	addressParsing(argv[1], headPointer);
 
 	return 0;
