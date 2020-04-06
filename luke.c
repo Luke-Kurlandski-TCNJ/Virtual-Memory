@@ -14,6 +14,8 @@
 int PAGE_TABLE[256][3];
 // index:nothing, value:(0:page number, 1:frame number)
 int TLB[16][2];
+// physical memory
+int MEMORY[256*256];
 
 // Calculate the page number from a logical address.
 int page_number(int address) {
@@ -95,9 +97,6 @@ void addressParsing(char *f) {
 		int address = atoi(str);
 		int number = page_number(address);
 		int offset = page_offset(address);
-		// Write info to the output files.
-		fwrite(&address, sizeof(int), 1, f1);
-		fwrite(&number, sizeof(int), 1, f2);
 		//printf("Number: %d Offset: %d\n", number, offset);
 		
 		// Search the TLB for the page.
@@ -109,7 +108,15 @@ void addressParsing(char *f) {
 				// Read from memory.
 			}
 		}
+		// Write info to the output files.
+		fprintf(f1, "%d", address);
+		fprintf(f2, "%d", number);
+		//fprintf(f3, "%d", SIGNED_BYTE_VALUE);
 	}
+	fclose(file);
+	fclose(f1);
+	fclose(f2);
+	fclose(f3);
 	return;
 }
 
