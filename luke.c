@@ -19,7 +19,7 @@ int TLB[16][2];
 int MEMORY[256*256];
 
 // Set up the queue for FIFO.
-int j() {
+entry *create_queue() {
 	TAILQ_HEAD(tailhead, entry) head;
 	struct tailhead *headp;
 	struct entry {
@@ -60,35 +60,35 @@ int search_table(int number) {
 		return -1;
 }
 
-void pageFault(int pageNumber) {
+// Return the frame number if a page fault occurs.
+int pageFault(int pageNumber) {
 	FILE* file;
 	// This should be the first index of our desired page
 	int beginIndex = 256 * pageNumber;
 	int maxChar = beginIndex + 256; 
 	unsigned char str[maxChar];
 
-	// open the .bin file
+	// read in the data from BACKING_STORE.bin	
 	file = fopen("BACKING_STORE.bin", "rb");
-
 	if (file == NULL) {
 		printf("Could not open BACKING_STORE.bin\n");
-		return;
+		return -1;
 	}
-
-	// read in the data from BACKING_STORE.bin	
 	fread(str, 1, maxChar, file);
-
-	// TESTING: print out 256 items after beginIndex
+	/*
 	for (int i = beginIndex; i < maxChar; i++) {
 		printf("%u  ", str[i]);
 	}
-
 	printf("\n");
-	
-	// close the file when finished
+	*/
 	fclose(file);
-
-	return;
+	
+	int frame_number = 0; //temp
+	// Move str into memory
+	// Update TLB
+	// Update page table
+	
+	return frame_number;
 }
 
 void addressParsing(char *f) {	
@@ -118,10 +118,11 @@ void addressParsing(char *f) {
 		if (frame_number < 0) {
 			// Search page table for page.
 			frame_number = search_table(number);
-			if (frame_number < 0) {
-				// Read from memory.
+			if (frame_number < 0) { 
+				frame_number = pageFault(number);
 			}
 		}
+		printf("%d", frame_number);
 		// Write info to the output files.
 		fprintf(f1, "%d", address);
 		fprintf(f2, "%d", number);
