@@ -69,7 +69,8 @@ int pageFault(int pageNumber, int offset,
 	// This should be the first index of our desired page
 	int beginIndex = 256 * pageNumber;
 	int maxChar = beginIndex + 256; 
-	unsigned char str[maxChar];
+	char str[maxChar];
+	//char str[maxChar];
 
 	// read in the data from BACKING_STORE.bin	
 	file = fopen("BACKING_STORE.bin", "rb");
@@ -78,8 +79,9 @@ int pageFault(int pageNumber, int offset,
 		return -1;
 	}
 	fread(str, 1, maxChar, file);
-	for (int i = beginIndex; i < maxChar; i++) {
-		MEMORY[i] = str[i];
+	
+	for (int i = 0; i < 256; i++) {
+		MEMORY[frame_number*256 + i] = str[beginIndex + i];
 		//printf("%u  ", str[i]);
 	}
 	//printf("\n");
@@ -143,11 +145,11 @@ void addressParsing(char *f, struct tailhead* headPointer) {
 						headPointer);
 			}
 		}
-		printf("%d", frame_number);
+		//printf("%d", frame_number);
 		// Write info to the output files.
-		fprintf(f1, "%d", address);
-		fprintf(f2, "%d", number);
-		//fprintf(f3, "%d", SIGNED_BYTE_VALUE);
+		fprintf(f1, "%d\n", address);
+		fprintf(f2, "%d\n", frame_number*256 + offset); //FIXME
+		fprintf(f3, "%d\n", MEMORY[frame_number*256+offset]); //FIXME
 	}
 	fclose(file);
 	fclose(f1);
