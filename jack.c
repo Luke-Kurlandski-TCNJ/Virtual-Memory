@@ -8,12 +8,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <sys/queue.h>
 
 // index:page number
 // value:(0:frame number, 1:page offset, 2:valid/invalid bit)
 int PAGE_TABLE[256][3];
 // index:nothing, value:(0:page number, 1:frame number)
 int TLB[16][2];
+// physical memory
+int MEMORY[256*256];
+
+	TAILQ_HEAD(tailhead, entry) head;
+	struct tailhead *headp;
+	struct entry {
+		int val;
+		TAILQ_ENTRY(entry) entries;
+	} *n, *np;
 
 // Calculate the page number from a logical address.
 int page_number(int address) {
@@ -27,14 +37,24 @@ int page_offset(int address) {
 	return (255 & address);
 }
 
-void pageFault(int pageNumber) {
+// Set up the queue for FIFO.
+struct tailhead* createQueue() {
+	TAILQ_INIT(&head);
+	n = malloc(sizeof(struct entry));
+	TAILQ_INSERT_TAIL(&head, n, entries);
+
+	return (headp);
+}
+
+
+void pageFault(int pageNumber, struct tailhead* headPointer) {
 	FILE* file;
 	// This should be the first index of our desired page
 	int beginIndex = 256 * pageNumber;
-	int maxChar = beginIndex + 256; //TESTING: Set size to entire file
+	int maxChar = beginIndex + 256;
 	char str[maxChar];
 
-	// open the .bin file
+	// Open the .bin file
 	file = fopen("BACKING_STORE.bin", "rb");
 
 	if (file == NULL) {
@@ -42,18 +62,21 @@ void pageFault(int pageNumber) {
 		return;
 	}
 
-	// read in the data from BACKING_STORE.bin	
+	// Read in the data from BACKING_STORE.bin	
 	fread(str, 1, maxChar, file);
 
-	// TESTING: print out 256 items after beginIndex
+	// Bring 256 items from range (beginIndex, maxChar) into physical memory
 	for (int i = beginIndex; i < maxChar; i++) {
-		printf("%d  ", str[i]);
+		MEMORY[i] = str[i];
 	}
-
-	printf("\n");
 	
-	// close the file when finished
+	// Close the file when finished
 	fclose(file);
+
+	// Update the queue
+
+	// Update the TLB
+
 
 	return;
 }
@@ -76,21 +99,23 @@ int search_table(int number) {
 		return -1;
 }
 
-void addressParsing(char *f) {
-	FILE* file;
-	int maxChar = 10;
-	char str[maxChar];
-	// open txt file containing all logical addresses
-	file = fopen(f, "r");
-	
-	// return if file could not open
-	if (file == NULL) {
-		printf("Could not open address file.\n");
+void addressParsing(char *f, struct tailhead* headPointer) {	
+	// File containing all logical addresses and output files.
+	FILE *file = fopen(f, "r");
+	FILE *f1 = fopen("out1.txt", "w");
+	FILE *f2 = fopen("out2.txt", "w");
+	FILE *f3 = fopen("out3.txt", "w");
+	// Return if failures occur.
+	if (file==NULL || f1==NULL || f2==NULL || f3==NULL) {
+		printf("Could not open a file.\n");
 		return;
 	}
 
-	// parse and get info from each logical address
+	int maxChar = 10;
+	char str[maxChar];
+	// Parse file, get info from each logical address, write
 	while (fgets(str, maxChar, file) != NULL) {
+		// Get info from the file.
 		int address = atoi(str);
 		int number = page_number(address);
 		int offset = page_offset(address);
@@ -102,14 +127,26 @@ void addressParsing(char *f) {
 			// Search page table for page.
 			frame_number = search_table(number);
 			if (frame_number < 0) {
-				pageFault(number);
+				// Read from memory.
+				pageFault(number, headPointer);
 			}
 		}
+		// Write info to the output files.
+		fprintf(f1, "%d", address);
+		fprintf(f2, "%d", number);
+		//fprintf(f3, "%d", SIGNED_BYTE_VALUE);
 	}
+	fclose(file);
+	fclose(f1);
+	fclose(f2);
+	fclose(f3);
 	return;
 }
 
 int main(int *argc, char **argv) {	
-	addressParsing(argv[1]);
+	struct tailhead* headPointer = createQueue();
+
+	addressParsing(argv[1], headPointer);
+
 	return 0;
 }
