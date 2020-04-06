@@ -18,17 +18,19 @@ int TLB[16][2];
 // physical memory
 int MEMORY[256*256];
 
-// Set up the queue for FIFO.
-entry *create_queue() {
-	TAILQ_HEAD(tailhead, entry) head;
-	struct tailhead *headp;
-	struct entry {
-		int val;
-		TAILQ_ENTRY(entry) entries;
-	} *n, *np;
+// Set up the queue for FIFO replacement.
+TAILQ_HEAD(tailhead, entry) head;
+struct entry{
+	int val; //FIXME: what goes here?
+	TAILQ_ENTRY(entry) entries;
+} *n;
+
+// Create queue and return the pointer.
+struct tailhead *createQueue() {
 	TAILQ_INIT(&head);
 	n = malloc(sizeof(struct entry));
-	TAILQ_INSERT_HEAD(&head, n, entries);
+	TAILQ_INSERT_TAIL(&head, n, entries);
+	return &head;
 }
 
 // Calculate the page number from a logical address.
@@ -61,7 +63,8 @@ int search_table(int number) {
 }
 
 // Return the frame number if a page fault occurs.
-int pageFault(int pageNumber) {
+int pageFault(int pageNumber, int offset, 
+		struct tailhead* headPointer) {
 	FILE* file;
 	// This should be the first index of our desired page
 	int beginIndex = 256 * pageNumber;
@@ -75,23 +78,26 @@ int pageFault(int pageNumber) {
 		return -1;
 	}
 	fread(str, 1, maxChar, file);
-	/*
 	for (int i = beginIndex; i < maxChar; i++) {
-		printf("%u  ", str[i]);
+		MEMORY[i] = str[i];
+		//printf("%u  ", str[i]);
 	}
-	printf("\n");
-	*/
+	//printf("\n");
 	fclose(file);
 	
-	int frame_number = 0; //temp
+	//FIXME: implement a page replacement algorithm.
+	int frame_number = pageNumber;
 	// Move str into memory
 	// Update TLB
 	// Update page table
+	PAGE_TABLE[pageNumber][0] = frame_number;
+	PAGE_TABLE[pageNumber][1] = offset;
+	PAGE_TABLE[pageNumber][2] = 1;
 	
 	return frame_number;
 }
 
-void addressParsing(char *f) {	
+void addressParsing(char *f, struct tailhead* headPointer) {
 	// File containing all logical addresses and output files.
 	FILE *file = fopen(f, "r");
 	FILE *f1 = fopen("out1.txt", "w");
@@ -119,7 +125,8 @@ void addressParsing(char *f) {
 			// Search page table for page.
 			frame_number = search_table(number);
 			if (frame_number < 0) { 
-				frame_number = pageFault(number);
+				frame_number = pageFault(number, offset, 
+						headPointer);
 			}
 		}
 		printf("%d", frame_number);
@@ -136,6 +143,7 @@ void addressParsing(char *f) {
 }
 
 int main(int *argc, char **argv) {	
-	addressParsing(argv[1]);
+	struct tailhead *headPointer = createQueue();
+	addressParsing(argv[1], headPointer);
 	return 0;
 }
