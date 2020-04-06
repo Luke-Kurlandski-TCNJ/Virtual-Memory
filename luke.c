@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <sys/queue.h>
 
 // index:page number
 // value:(0:frame number, 1:page offset, 2:valid/invalid bit)
@@ -16,6 +17,17 @@ int PAGE_TABLE[256][3];
 int TLB[16][2];
 // physical memory
 int MEMORY[256*256];
+
+// QUEUE
+TAILQ_HEAD(tailhead, entry) head;
+struct tailhead *headp;
+struct entry {
+	// int data;
+	TAILQ_ENTRY(entry) entries;
+} *n;
+TAILQ_INIT(&head);
+n = malloc(sizeof(struct entry));
+TAILQ_INSERT_HEAD(&head, n, entries);
 
 // Calculate the page number from a logical address.
 int page_number(int address) {
