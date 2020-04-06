@@ -88,7 +88,21 @@ int pageFault(int pageNumber, int offset,
 	//FIXME: implement a page replacement algorithm.
 	int frame_number = pageNumber;
 	// Move str into memory
-	// Update TLB
+	// Update the TLB
+	int emptySlot = 0;
+	for (int i = 0; i < 16; i++) {
+		if (TLB[i][0] == -1) {
+			TLB[i][0] = pageNumber;
+			TLB[i][1] = frame_number; 
+			emptySlot = 1;
+			break;
+		}
+	}
+	if (emptySlot == 0) {
+		int newSlot = rand() % 16;
+		TLB[newSlot][0] = pageNumber;
+		TLB[newSlot][1] = frame_number; 
+	}
 	// Update page table
 	PAGE_TABLE[pageNumber][0] = frame_number;
 	PAGE_TABLE[pageNumber][1] = offset;
@@ -143,6 +157,13 @@ void addressParsing(char *f, struct tailhead* headPointer) {
 }
 
 int main(int *argc, char **argv) {	
+	
+	// 
+	for (int i=0; i<16; i++) {
+		for (int j=0; j<2; j++) 
+			TLB[i][j] = -1;
+	}
+	
 	struct tailhead *headPointer = createQueue();
 	addressParsing(argv[1], headPointer);
 	return 0;
