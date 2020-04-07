@@ -69,7 +69,8 @@ int pageFault(int pageNumber, int offset,
 	// This should be the first index of our desired page
 	int beginIndex = 256 * pageNumber;
 	int maxChar = beginIndex + 256; 
-	unsigned char str[maxChar];
+	char str[maxChar];
+	//char str[maxChar];
 
 	// read in the data from BACKING_STORE.bin	
 	file = fopen("BACKING_STORE.bin", "rb");
@@ -78,17 +79,33 @@ int pageFault(int pageNumber, int offset,
 		return -1;
 	}
 	fread(str, 1, maxChar, file);
-	for (int i = beginIndex; i < maxChar; i++) {
-		MEMORY[i] = str[i];
+
+	int frame_number = pageNumber;
+
+	for (int i = 0; i < 256; i++) {
+		MEMORY[frame_number*256 + i] = str[beginIndex + i];
 		//printf("%u  ", str[i]);
 	}
 	//printf("\n");
 	fclose(file);
 	
 	//FIXME: implement a page replacement algorithm.
-	int frame_number = pageNumber;
 	// Move str into memory
-	// Update TLB
+	// Update the TLB
+	int emptySlot = 0;
+	for (int i = 0; i < 16; i++) {
+		if (TLB[i][0] == -1) {
+			TLB[i][0] = pageNumber;
+			TLB[i][1] = frame_number; 
+			emptySlot = 1;
+			break;
+		}
+	}
+	if (emptySlot == 0) {
+		int newSlot = rand() % 16;
+		TLB[newSlot][0] = pageNumber;
+		TLB[newSlot][1] = frame_number; 
+	}
 	// Update page table
 	PAGE_TABLE[pageNumber][0] = frame_number;
 	PAGE_TABLE[pageNumber][1] = offset;
@@ -129,11 +146,11 @@ void addressParsing(char *f, struct tailhead* headPointer) {
 						headPointer);
 			}
 		}
-		printf("%d", frame_number);
+		//printf("%d", frame_number);
 		// Write info to the output files.
-		fprintf(f1, "%d", address);
-		fprintf(f2, "%d", number);
-		//fprintf(f3, "%d", SIGNED_BYTE_VALUE);
+		fprintf(f1, "%d\n", address);
+		fprintf(f2, "%d\n", frame_number*256 + offset); //FIXME
+		fprintf(f3, "%d\n", MEMORY[frame_number*256+offset]); //FIXME
 	}
 	fclose(file);
 	fclose(f1);
@@ -143,6 +160,13 @@ void addressParsing(char *f, struct tailhead* headPointer) {
 }
 
 int main(int *argc, char **argv) {	
+	
+	// 
+	for (int i=0; i<16; i++) {
+		for (int j=0; j<2; j++) 
+			TLB[i][j] = -1;
+	}
+	
 	struct tailhead *headPointer = createQueue();
 	addressParsing(argv[1], headPointer);
 	return 0;
