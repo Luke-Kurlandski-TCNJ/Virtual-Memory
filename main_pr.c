@@ -94,20 +94,12 @@ int pageFault(int pageNumber, int offset) {
 	
 	// Determine the frame number, next empty frame. 
 	int frame_number = size();
-	int pageNo = 0;
 	if (frame_number >= 128) {
 		// Get the frame_number to be deleted.
-		frame_number = delete();
-		// Get the page with that frame_number.
-		for (int i=0; i<256; i++) {
-			if (PAGE_TABLE[i][0] == frame_number) {
-				pageNo = i;
-				break;
-			}
-		}
+		int pageNo = delete();
 		// Alter valid/invalid bit.
 		PAGE_TABLE[pageNo][2] = 0;
-
+		frame_number = PAGE_TABLE[pageNo][0];
 		// Remove that page from the TLB
 		for (int i = 0; i < 16; i++) {
 			if (TLB[i][0] == pageNo) {
@@ -117,7 +109,7 @@ int pageFault(int pageNumber, int offset) {
 		}
 	}
 	// Add item to queue.
-	insert(frame_number);
+	insert(pageNumber);
 
 	// Fill the memory in the correct frame.
 	for (int i = 0; i < 256; i++) {
