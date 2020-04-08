@@ -13,6 +13,7 @@
 
 #define MAX 128
 
+// Analytical variables.
 int total_refs = 0;
 int page_faults = 0;
 int TLB_hits = 0;
@@ -26,24 +27,19 @@ int TLB[16][2];
 int MEMORY[256*256];
 int fr_count = 0;
 
+// Queue for implementing FIFO page replacement.
 int intArray[MAX];
 int front = 0;
 int rear = -1;
 int itemCount = 0;
 
-bool isFull() {
-   return itemCount == MAX;
-}
-
-int size() {
-   return itemCount;
-}  
+bool isFull() { return itemCount == MAX; }
+int size() { return itemCount; }  
 
 void insert(int data) {
    if(!isFull()) {
-      if(rear == MAX-1) {
+      if(rear == MAX-1)
          rear = -1;            
-      }       
       intArray[++rear] = data;
       itemCount++;
    }
@@ -51,22 +47,17 @@ void insert(int data) {
 
 int delete() {
    int data = intArray[front++];
-   if(front == MAX) {
+   if(front == MAX) 
       front = 0;
-   }
    itemCount--;
    return data;  
 }
 
 // Calculate the page number from a logical address.
-int page_number(int address) {
-	return (255 & address>>8);
-}
+int page_number(int address) { return (255 & address>>8); }
 
 // Calculate the offset for a logical address.
-int page_offset(int address) {
-	return (255 & address);
-}
+int page_offset(int address) { return (255 & address); }
 
 // Return the frame number if the page number is in the TLB.
 int search_TLB(int number) {
@@ -175,7 +166,6 @@ void addressParsing(char *f) {
 				frame_number = pageFault(number, offset);
 			}
 		}
-		//printf("%d", frame_number);
 		// Write info to the output files.
 		fprintf(f1, "%d\n", address);
 		fprintf(f2, "%d\n", frame_number*256 + offset); //FIXME
