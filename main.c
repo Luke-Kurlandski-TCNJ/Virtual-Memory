@@ -20,7 +20,8 @@ int MEMORY[256*256];
 int total_refs, tlb_hits, page_faults = 0;
 // for case of no page replacement, this keeps track of the frame to be used
 int current_frame = 0;
-
+// for tlb replacement, keep count
+int tlb_counter = 0;
 
 // Calculate the page number from a logical address.
 int page_number(int address) {
@@ -90,9 +91,10 @@ int pageFault(int pageNumber, int offset) {
 		}
 	}
 	if (emptySlot == 0) {
-		int newSlot = rand() % 16;
+		int newSlot = tlb_counter  % 16;
 		TLB[newSlot][0] = pageNumber;
-		TLB[newSlot][1] = frame_number; 
+		TLB[newSlot][1] = frame_number;
+		tlb_counter++;
 	}
 	// Update page table
 	PAGE_TABLE[pageNumber][0] = frame_number;
