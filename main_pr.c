@@ -108,6 +108,14 @@ int pageFault(int pageNumber, int offset) {
 		// Alter valid/invalid bit.
 		PAGE_TABLE[d][2] = 0;
 		frame_number--;
+
+		// Remove that page from the TLB
+		for (int i = 0; i < 16; i++) {
+			if (TLB[i][0] == d) {
+				TLB[i][0] = -1;
+				TLB[i][1] = -1;
+			}
+		}
 	}
 	// Add item to queue.
 	insert(frame_number);
