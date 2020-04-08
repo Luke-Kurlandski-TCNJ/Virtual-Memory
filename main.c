@@ -17,6 +17,10 @@ int PAGE_TABLE[256][3];
 int TLB[16][2];
 // physical memory
 int MEMORY[256*256];
+// variables used to track TLB hits and page faults
+float total_refs, tlb_hits, page_faults = 0.0;
+// for case of no page replacement, this keeps track of the frame to be used
+int current_frame = 0;
 
 // Set up the queue for FIFO replacement.
 typedef struct q_item {
@@ -72,6 +76,8 @@ int search_table(int number) {
 
 // Return the frame number if a page fault occurs.
 int pageFault(int pageNumber, int offset, q_item q) {
+	page_faults += 1;
+
 	FILE* file;
 	// This should be the first index of our desired page
 	int beginIndex = 256 * pageNumber;
@@ -87,12 +93,15 @@ int pageFault(int pageNumber, int offset, q_item q) {
 	}
 	fread(str, 1, maxChar, file);
 	
-	int frame_number = pageNumber;
+	int frame_number = current_frame;
 
 	for (int i = 0; i < 256; i++) {
 		MEMORY[frame_number*256 + i] = str[beginIndex + i];
 		//printf("%u  ", str[i]);
 	}
+
+	current_frame++;
+
 	//printf("\n");
 	fclose(file);
 	
@@ -136,6 +145,8 @@ void addressParsing(char *f, q_item q) {
 	char str[maxChar];
 	// Parse file, get info from each logical address, write
 	while (fgets(str, maxChar, file) != NULL) {
+		total_refs += 1;
+
 		// Get info from the file.
 		int address = atoi(str);
 		int number = page_number(address);
@@ -150,6 +161,9 @@ void addressParsing(char *f, q_item q) {
 			if (frame_number < 0) { 
 				frame_number = pageFault(number, offset, q);
 			}
+		}
+		else {
+			tlb_hits += 1;
 		}
 		//printf("%d", frame_number);
 		// Write info to the output files.
@@ -176,5 +190,13 @@ int main(int *argc, char **argv) {
 	}
 	
 	addressParsing(argv[1], q);
+
+	float page_fault_rate = (page_faults / total_refs) * 100;
+	float tlb_hit_rate = (tlb_hits / total_refs) * 100;
+
+
+	printf("Page-fault rate: %f %%\n", page_fault_rate);
+	printf("TLB hit rate: %f %%\n", tlb_hit_rate);
+
 	return 0;
 }
