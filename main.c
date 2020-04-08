@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <sys/queue.h>
 
 // index:page number
 // value:(0:frame number, 1:page offset, 2:valid/invalid bit)
@@ -22,28 +21,6 @@ float total_refs, tlb_hits, page_faults = 0.0;
 // for case of no page replacement, this keeps track of the frame to be used
 int current_frame = 0;
 
-// Set up the queue for FIFO replacement.
-typedef struct q_item {
-	int value;
-	TAILQ_ENTRY(q_item) entries;
-	TAILQ_HEAD(, q_item) head;
-} q_item;
-
-void enqueue(int n, q_item *q) {
-	// add entry of value "val" to queue
-	q_item *item;
-	item = malloc(sizeof(q_item));
-	item->value = n;
-	TAILQ_INSERT_TAIL(&q->head, item, entries);
-}
-
-void dequeue(q_item *q) {
-	// dequeue one item from queue
-	q_item *returned_item;
-	returned_item = TAILQ_FIRST(&q->head);
-	TAILQ_REMOVE(&q->head, returned_item, entries);
-	free(returned_item);
-}
 
 // Calculate the page number from a logical address.
 int page_number(int address) {
@@ -75,7 +52,7 @@ int search_table(int number) {
 }
 
 // Return the frame number if a page fault occurs.
-int pageFault(int pageNumber, int offset, q_item q) {
+int pageFault(int pageNumber, int offset) {
 	page_faults += 1;
 
 	FILE* file;
@@ -83,7 +60,6 @@ int pageFault(int pageNumber, int offset, q_item q) {
 	int beginIndex = 256 * pageNumber;
 	int maxChar = beginIndex + 256; 
 	char str[maxChar];
-	//char str[maxChar];
 
 	// read in the data from BACKING_STORE.bin	
 	file = fopen("BACKING_STORE.bin", "rb");
@@ -97,15 +73,12 @@ int pageFault(int pageNumber, int offset, q_item q) {
 
 	for (int i = 0; i < 256; i++) {
 		MEMORY[frame_number*256 + i] = str[beginIndex + i];
-		//printf("%u  ", str[i]);
 	}
 
 	current_frame++;
 
-	//printf("\n");
 	fclose(file);
 	
-	//FIXME: implement a page replacement algorithm.
 	// Update the TLB
 	int emptySlot = 0;
 	for (int i = 0; i < 16; i++) {
@@ -129,7 +102,7 @@ int pageFault(int pageNumber, int offset, q_item q) {
 	return frame_number;
 }
 
-void addressParsing(char *f, q_item q) {
+void addressParsing(char *f) {
 	// File containing all logical addresses and output files.
 	FILE *file = fopen(f, "r");
 	FILE *f1 = fopen("out1.txt", "w");
@@ -151,7 +124,6 @@ void addressParsing(char *f, q_item q) {
 		int address = atoi(str);
 		int number = page_number(address);
 		int offset = page_offset(address);
-		//printf("Number: %d Offset: %d\n", number, offset);
 		
 		// Search the TLB for the page.
 		int frame_number = search_TLB(number);
@@ -159,17 +131,16 @@ void addressParsing(char *f, q_item q) {
 			// Search page table for page.
 			frame_number = search_table(number);
 			if (frame_number < 0) { 
-				frame_number = pageFault(number, offset, q);
+				frame_number = pageFault(number, offset);
 			}
 		}
 		else {
 			tlb_hits += 1;
 		}
-		//printf("%d", frame_number);
 		// Write info to the output files.
 		fprintf(f1, "%d\n", address);
-		fprintf(f2, "%d\n", frame_number*256 + offset); //FIXME
-		fprintf(f3, "%d\n", MEMORY[frame_number*256+offset]); //FIXME
+		fprintf(f2, "%d\n", frame_number*256 + offset);
+		fprintf(f3, "%d\n", MEMORY[frame_number*256+offset]);
 	}
 	fclose(file);
 	fclose(f1);
@@ -179,21 +150,16 @@ void addressParsing(char *f, q_item q) {
 }
 
 int main(int *argc, char **argv) {	
-	// Initialize a queue to use for page replacement
-	q_item q;
-	TAILQ_INIT(&q.head);
-
 	// Initialize all TLB entries with -1 
 	for (int i=0; i<16; i++) {
 		for (int j=0; j<2; j++) 
 			TLB[i][j] = -1;
 	}
 	
-	addressParsing(argv[1], q);
+	addressParsing(argv[1]);
 
 	float page_fault_rate = (page_faults / total_refs) * 100;
 	float tlb_hit_rate = (tlb_hits / total_refs) * 100;
-
 
 	printf("Page-fault rate: %f %%\n", page_fault_rate);
 	printf("TLB hit rate: %f %%\n", tlb_hit_rate);

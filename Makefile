@@ -1,6 +1,6 @@
 all:
 	gcc -o main main.c
-	gcc -i main_pr main_pr.c
+	gcc -o main_pr main_pr.c
 
 clean:
 	rm main
