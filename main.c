@@ -17,7 +17,7 @@ int TLB[16][2];
 // physical memory
 int MEMORY[256*256];
 // variables used to track TLB hits and page faults
-float total_refs, tlb_hits, page_faults = 0.0;
+int total_refs, tlb_hits, page_faults = 0;
 // for case of no page replacement, this keeps track of the frame to be used
 int current_frame = 0;
 
@@ -158,11 +158,11 @@ int main(int *argc, char **argv) {
 	
 	addressParsing(argv[1]);
 
-	float page_fault_rate = (page_faults / total_refs) * 100;
-	float tlb_hit_rate = (tlb_hits / total_refs) * 100;
+	float page_fault_rate = ((float)page_faults / total_refs);
+	float tlb_hit_rate = ((float)tlb_hits / total_refs);
 
-	printf("Page-fault rate: %f %%\n", page_fault_rate);
-	printf("TLB hit rate: %f %%\n", tlb_hit_rate);
+	printf("Page faults = %d / %d, %f\n", page_faults, total_refs, page_fault_rate);
+	printf("TLB hit rate: %d / %d, %f\n", tlb_hits, total_refs, tlb_hit_rate);
 
 	return 0;
 }
