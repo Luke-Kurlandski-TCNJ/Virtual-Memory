@@ -24,7 +24,7 @@ int PAGE_TABLE[256][3];
 // index:nothing, value:(0:page number, 1:frame number)
 int TLB[16][2];
 // physical memory
-int MEMORY[256*256];
+int MEMORY[256*MAX];
 int fr_count = 0;
 
 // Queue for implementing FIFO page replacement.
@@ -96,7 +96,18 @@ int pageFault(int pageNumber, int offset) {
 	// Determine the frame number, next empty frame. 
 	int frame_number = size();
 	if (frame_number >= 128) {
-		delete();
+		// Get the frame_number to be deleted.
+		int d = delete();
+		// Get the page with that frame_number.
+		for (int i=0; i<256; i++) {
+			if (PAGE_TABLE[i][0] == frame_number) {
+				d = i;
+				break;
+			}
+		}
+		// Alter valid/invalid bit.
+		PAGE_TABLE[d][2] = 0;
+		frame_number--;
 	}
 	// Add item to queue.
 	insert(frame_number);
@@ -156,15 +167,16 @@ void addressParsing(char *f) {
 		
 		// Search the TLB for the page.
 		int frame_number = search_TLB(number);
-		TLB_hits++;
 		if (frame_number < 0) {
-			TLB_hits--;
 			// Search page table for page.
 			frame_number = search_table(number);
 			if (frame_number < 0) { 
 				page_faults++;
 				frame_number = pageFault(number, offset);
 			}
+		}
+		else {
+			TLB_hits++;
 		}
 		// Write info to the output files.
 		fprintf(f1, "%d\n", address);
