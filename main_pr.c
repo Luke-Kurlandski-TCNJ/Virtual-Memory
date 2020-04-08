@@ -13,6 +13,10 @@
 
 #define MAX 128
 
+int total_refs = 0;
+int page_faults = 0;
+int TLB_hits = 0;
+
 // index:page number
 // value:(0:frame number, 1:page offset, 2:valid/invalid bit)
 int PAGE_TABLE[256][3];
@@ -27,14 +31,6 @@ int front = 0;
 int rear = -1;
 int itemCount = 0;
 
-int peek() {
-   return intArray[front];
-}
-
-bool isEmpty() {
-   return itemCount == 0;
-}
-
 bool isFull() {
    return itemCount == MAX;
 }
@@ -44,38 +40,31 @@ int size() {
 }  
 
 void insert(int data) {
-
    if(!isFull()) {
-	
       if(rear == MAX-1) {
          rear = -1;            
       }       
-
       intArray[++rear] = data;
       itemCount++;
    }
 }
 
-int removeData() {
+int delete() {
    int data = intArray[front++];
-	
    if(front == MAX) {
       front = 0;
    }
-	
    itemCount--;
    return data;  
 }
 
 // Calculate the page number from a logical address.
 int page_number(int address) {
-	// 255 = 000000001111111100000000
 	return (255 & address>>8);
 }
 
 // Calculate the offset for a logical address.
 int page_offset(int address) {
-	// 255 = 000000000000000011111111
 	return (255 & address);
 }
 
@@ -116,9 +105,8 @@ int pageFault(int pageNumber, int offset) {
 	// Determine the frame number, next empty frame. 
 	int frame_number = size();
 	if (frame_number >= 128) {
-		removeData();
+		delete();
 	}
-	printf("Frame Number: %d\n", frame_number);
 	// Add item to queue.
 	insert(frame_number);
 
@@ -168,6 +156,7 @@ void addressParsing(char *f) {
 	char str[maxChar];
 	// Parse file, get info from each logical address, write
 	while (fgets(str, maxChar, file) != NULL) {
+		total_refs++;
 		// Get info from the file.
 		int address = atoi(str);
 		int number = page_number(address);
@@ -176,10 +165,13 @@ void addressParsing(char *f) {
 		
 		// Search the TLB for the page.
 		int frame_number = search_TLB(number);
+		TLB_hits++;
 		if (frame_number < 0) {
+			TLB_hits--;
 			// Search page table for page.
 			frame_number = search_table(number);
 			if (frame_number < 0) { 
+				page_faults++;
 				frame_number = pageFault(number, offset);
 			}
 		}
@@ -204,5 +196,11 @@ int main(int *argc, char **argv) {
 	}
 	
 	addressParsing(argv[1]);
+	
+	float page_fault_rate = (float)page_faults / total_refs;
+	float TLB_hit_rate = (float)TLB_hits / total_refs;
+
+	printf("Page Fault Rate: %d/%d: %f\n", page_faults, total_refs, page_fault_rate);
+	printf("TLB Hit Rate: %d/%d: %f\n", TLB_hits, total_refs, TLB_hit_rate);
 	return 0;
 }
