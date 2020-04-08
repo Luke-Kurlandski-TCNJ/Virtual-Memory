@@ -31,27 +31,34 @@ int fr_count = 0;
 // Queue for implementing FIFO page replacement.
 int intArray[MAX];
 int front = 0;
-int rear = -1;
-int itemCount = 0;
+int back = -1;
+int totalItems = 0;
 
-bool isFull() { return itemCount == MAX; }
-int size() { return itemCount; }  
+bool isFull() {
+	return totalItems == MAX;
+}
+
+int size() {
+	return totalItems;
+}  
 
 void insert(int data) {
-   if(!isFull()) {
-      if(rear == MAX-1)
-         rear = -1;            
-      intArray[++rear] = data;
-      itemCount++;
+	if(!isFull()) {
+		if(back == MAX-1) {
+			back = -1;
+		}
+		intArray[++back] = data;
+		totalItems++;
    }
 }
 
 int delete() {
-   int data = intArray[front++];
-   if(front == MAX) 
-      front = 0;
-   itemCount--;
-   return data;  
+	int data = intArray[front++];
+	if(front == MAX) { 
+		front = 0;
+	}
+	totalItems--;
+	return data;  
 }
 
 // Calculate the page number from a logical address.
