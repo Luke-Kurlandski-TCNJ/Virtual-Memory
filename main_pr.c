@@ -17,6 +17,7 @@
 int total_refs = 0;
 int page_faults = 0;
 int TLB_hits = 0;
+int tlb_counter = 0;
 
 // index:page number
 // value:(0:frame number, 1:page offset, 2:valid/invalid bit)
@@ -128,9 +129,10 @@ int pageFault(int pageNumber, int offset) {
 		}
 	}
 	if (emptySlot == 0) {
-		int newSlot = rand() % 16;
+		int newSlot = tlb_counter % 16;
 		TLB[newSlot][0] = pageNumber;
-		TLB[newSlot][1] = frame_number; 
+		TLB[newSlot][1] = frame_number;
+		tlb_counter++;
 	}
 	
 	// Update page table
