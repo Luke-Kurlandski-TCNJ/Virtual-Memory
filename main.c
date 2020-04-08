@@ -71,7 +71,7 @@ int search_table(int number) {
 }
 
 // Return the frame number if a page fault occurs.
-int pageFault(int pageNumber, int offset) {
+int pageFault(int pageNumber, int offset, q_item q) {
 	FILE* file;
 	// This should be the first index of our desired page
 	int beginIndex = 256 * pageNumber;
@@ -120,7 +120,7 @@ int pageFault(int pageNumber, int offset) {
 	return frame_number;
 }
 
-void addressParsing(char *f) {
+void addressParsing(char *f, q_item q) {
 	// File containing all logical addresses and output files.
 	FILE *file = fopen(f, "r");
 	FILE *f1 = fopen("out1.txt", "w");
@@ -148,7 +148,7 @@ void addressParsing(char *f) {
 			// Search page table for page.
 			frame_number = search_table(number);
 			if (frame_number < 0) { 
-				frame_number = pageFault(number, offset);
+				frame_number = pageFault(number, offset, q);
 			}
 		}
 		//printf("%d", frame_number);
@@ -175,6 +175,6 @@ int main(int *argc, char **argv) {
 			TLB[i][j] = -1;
 	}
 	
-	addressParsing(argv[1]);
+	addressParsing(argv[1], q);
 	return 0;
 }
